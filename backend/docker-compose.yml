@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  postgres-1:
+    container_name: postgres-1
+    image: postgres:14.3
+    restart: always
+    volumes:
+      - ./docker/pgsql/config:/docker-entrypoint-initdb.d
+  
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wildberries"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  lust:
+    container_name: lust
+    image: chillfish8/lust:latest
+    restart: always
+    ports:
+      - "8070:8080"
+    depends_on:
+      - postgres-1
+    env_file:
+      - .env
+    volumes:
+      - ./lust/config.yaml:/config.yaml
+      - ./docker/lust/logs:/logs    
+    command: [ "--config-file", "/config.yaml"]
