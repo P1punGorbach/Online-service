@@ -26,6 +26,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	GetByID(ctx context.Context, id int) (*models.User, *models.UserProfile, error)
 	CreateProfile(ctx context.Context, userID int) error
+	UpdateProfile(ctx context.Context, userID int, in models.UpdateProfileInput ) error
 
 	// другие методы, которые тебе нужны
 }
@@ -112,4 +113,7 @@ func (s *UserService) GetUserInfo(ctx context.Context, token string) (*models.Us
 	}
 	fmt.Println("✅ Распарсили userID:", userID)
 	return user, profile, nil
+}
+func (s *UserService) UpdateProfile(ctx context.Context, userID int, in models.UpdateProfileInput) error {
+	return s.repo.UpdateProfile(ctx, userID, in)
 }

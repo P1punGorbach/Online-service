@@ -85,3 +85,39 @@ func (r *UserRepo) CreateProfile(ctx context.Context, userID int) error {
 	`, userID)
 	return err
 }
+func (r *UserRepo) UpdateProfile(ctx context.Context, userID int, in models.UpdateProfileInput) error {
+	// Пример: получаем ID позиции по имени
+	var positionID int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id FROM positions WHERE name = $1
+	`, in.Position).Scan(&positionID)
+	if err != nil {
+		return fmt.Errorf("позиция не найдена: %w", err)
+	}
+
+	// Обновляем профиль
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE user_profiles
+		SET name = $1,
+		    height_cm = $2,
+		    weight_kg = $3,
+		    position_id = $4,
+		    updated_at = NOW()
+		WHERE user_id = $5
+	`, in.Name, in.Height, in.Weight, positionID, userID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления профиля: %w", err)
+	}
+
+	// (по желанию) обновляем email
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE users
+		SET email = $1
+		WHERE id = $2
+	`, in.Email, userID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления email: %w", err)
+	}
+
+	return nil
+}

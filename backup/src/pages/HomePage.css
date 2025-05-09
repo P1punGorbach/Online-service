@@ -1,0 +1,27 @@
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .mt40 {
+    margin-top: 40px;
+  }
+  
+  .slider-container {
+    position: relative;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+  
+  /* В слайдере карточка не растягивается */
+  .slick-slide > div {
+    display: flex !important;
+    justify-content: center;
+  }
+  
+  /* Сдвиг стрелок внутрь контейнера */
+  .slick-prev { left: 10px; }
+  .slick-next { right: 10px; }
+  /* HomePage.css */
+

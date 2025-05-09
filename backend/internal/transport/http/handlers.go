@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/P1punGorbach/backend/internal/auth"
+	"github.com/P1punGorbach/backend/internal/models"
 	"github.com/P1punGorbach/backend/internal/repository"
 	"github.com/P1punGorbach/backend/internal/service"
 	"github.com/gin-gonic/gin"
@@ -47,6 +48,11 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	api.GET("/products", h.ListProducts)
 
 	api.GET("/user", middlewareAuth, h.ApiUserInfo)
+	
+	api.POST("/logout", h.Logout) // 👈 вот здесь
+
+	api.POST("/user/update", middlewareAuth, h.UpdateUser)
+
 	return r
 }
 
@@ -161,6 +167,7 @@ func (h *Handler) ApiUserInfo(c *gin.Context) {
 		"height":   profile.HeightCm,
 		"weight":   profile.WeightKg,
 		"position": profile.PositionName,
+		"is_admin": user.IsAdmin,
 	})
 }
 func middlewareAuth(c *gin.Context) {
@@ -177,4 +184,43 @@ func middlewareAuth(c *gin.Context) {
 	}
 	c.Set("userID", userID)
 	c.Next()
+}
+func (h *Handler) Logout(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,           // 👈 удаление куки
+		HttpOnly: true,
+	})
+	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен"})
+}
+func (h *Handler) UpdateUser(c *gin.Context) {
+	userID, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Неавторизован"})
+		return
+	}
+
+var input models.UpdateProfileInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Неверный формат данных"})
+		return
+	}
+
+	err := h.userSvc.UpdateProfile(c.Request.Context(), userID.(int), input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка при обновлении профиля"})
+		return
+	}
+
+	// можно вернуть обновлённого пользователя
+	c.JSON(http.StatusOK, gin.H{
+		"name":     input.Name,
+		"email":    input.Email,
+		"height":   input.Height,
+		"weight":   input.Weight,
+		"position": input.Position,
+	})
 }

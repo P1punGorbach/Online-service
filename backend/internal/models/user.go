@@ -22,3 +22,10 @@ type UserProfile struct {
 	WeightKg   int       `db:"weight_kg"` // вес в килограммах			// например, 75		// Дата рождения
 	PositionName string       `db:"position_name"` // id позиции в таблице позиций		
 }
+type UpdateProfileInput struct {
+	Name     string
+	Email    string
+	Height   int
+	Weight   int
+	Position string
+}

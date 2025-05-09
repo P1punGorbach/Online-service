@@ -27,6 +27,12 @@ CREATE TABLE public.positions (
 	CONSTRAINT positions_pkey PRIMARY KEY (id)
 );
 
+INSERT INTO positions (name) VALUES
+  ('Разыгрывающий'),
+  ('Атакующий защитник'),
+  ('Лёгкий форвард'),
+  ('Тяжёлый форвард'),
+  ('Центровой');
 
 -- public.shops определение
 

@@ -1,0 +1,19 @@
+/* src/components/CategoryCard.css */
+.category-card {
+  width: 250px;        /* или любой нужный размер */
+  text-align: center;
+}
+.category-card__img,
+.category-card__placeholder {
+  width: 100%;
+  height: 150px;       /* высота карточки */
+  object-fit: cover;
+  background: #f0f0f0; /* фон для placeholder */
+}
+.category-card__img {
+  display: block;
+}
+.category-card__title {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
