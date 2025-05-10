@@ -5,7 +5,9 @@ package http
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/P1punGorbach/backend/internal/auth"
 	"github.com/P1punGorbach/backend/internal/models"
@@ -48,10 +50,18 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	api.GET("/products", h.ListProducts)
 
 	api.GET("/user", middlewareAuth, h.ApiUserInfo)
-	
+
 	api.POST("/logout", h.Logout) // 👈 вот здесь
 
 	api.POST("/user/update", middlewareAuth, h.UpdateUser)
+
+	api.GET("/users", middlewareAuth, h.ListUsers)
+
+	api.DELETE("/users/:id", middlewareAuth, h.DeleteUser)
+
+	api.POST("/users", middlewareAuth, h.CreateUser)
+
+	api.POST("/products", middlewareAuth, h.CreateProduct)
 
 	return r
 }
@@ -67,6 +77,22 @@ type registerInput struct {
 type loginInput struct {
 	Email    string `json:"email"    binding:"required,email"`
 	Password string `json:"password" binding:"required"`
+}
+type ProductInput struct {
+	Name         string   `json:"name"`
+	CategoryID   int      `json:"categoryId"`
+	BrandID      int      `json:"brandId"`
+	Description  string   `json:"description"`
+	GrowthMin    int      `json:"growthMin"`
+	GrowthMax    int      `json:"growthMax"`
+	WeightMin    int      `json:"weightMin"`
+	WeightMax    int      `json:"weightMax"`
+	PositionIDs  []int    `json:"positionIds"`
+	BallSize     string   `json:"ballSize"`
+	TopType      string   `json:"topType"`
+	BottomType   string   `json:"bottomType"`
+	AccessoryType string  `json:"accessoryType"`
+	StoreLinks   []string `json:"storeLinks"`
 }
 
 // Register — POST /api/register
@@ -162,12 +188,13 @@ func (h *Handler) ApiUserInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"email":    user.Email,
-		"name":     profile.Name,
-		"height":   profile.HeightCm,
-		"weight":   profile.WeightKg,
-		"position": profile.PositionName,
-		"is_admin": user.IsAdmin,
+		"email":       user.Email,
+		"name":        profile.Name,
+		"height":      profile.HeightCm,
+		"weight":      profile.WeightKg,
+		"position":    profile.PositionName,
+		"position_id": profile.PositionIndex,
+		"is_admin":    user.IsAdmin,
 	})
 }
 func middlewareAuth(c *gin.Context) {
@@ -190,7 +217,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		Name:     "token",
 		Value:    "",
 		Path:     "/",
-		MaxAge:   -1,           // 👈 удаление куки
+		MaxAge:   -1, // 👈 удаление куки
 		HttpOnly: true,
 	})
 	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен"})
@@ -202,7 +229,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-var input models.UpdateProfileInput
+	var input models.UpdateProfileInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Неверный формат данных"})
@@ -211,6 +238,7 @@ var input models.UpdateProfileInput
 
 	err := h.userSvc.UpdateProfile(c.Request.Context(), userID.(int), input)
 	if err != nil {
+		log.Println("❌ Ошибка обновления профиля:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка при обновлении профиля"})
 		return
 	}
@@ -224,3 +252,69 @@ var input models.UpdateProfileInput
 		"position": input.Position,
 	})
 }
+func (h *Handler) ListUsers(c *gin.Context) {
+	users, err := h.userSvc.ListAll(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка загрузки пользователей"})
+		return
+	}
+	c.JSON(http.StatusOK, users)
+}
+func (h *Handler) DeleteUser(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Некорректный ID"})
+		return
+	}
+
+	err = h.userSvc.Delete(c.Request.Context(), id)
+	if err != nil {
+		if err == repository.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Пользователь не найден"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка удаления"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Удалено"})
+}
+func (h *Handler) CreateUser(c *gin.Context) {
+	var in service.AdminCreateUserInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Неверный формат данных"})
+		return
+	}
+
+	user, err := h.userSvc.AdminCreateUser(c.Request.Context(), in)
+	if err != nil {
+		if err == service.ErrUserAlreadyExists {
+			c.JSON(http.StatusConflict, gin.H{"message": "Пользователь уже существует"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка создания пользователя"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"id":    user.ID,
+		"email": user.Email,
+	})
+}
+func (h *Handler) CreateProduct(c *gin.Context) {
+	var in ProductInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Некорректные данные"})
+		return
+	}
+
+	err := h.prodSvc.CreateProduct(c.Request.Context(), in)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка при создании товара"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Товар успешно создан"})
+}
+

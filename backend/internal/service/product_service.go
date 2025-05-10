@@ -1,19 +1,27 @@
 package service
 
-import "github.com/P1punGorbach/backend/internal/models"
+import (
+	"context"
+
+	"github.com/P1punGorbach/backend/internal/models"
+)
 
 type ProductRepo interface {
-  GetAll() ([]models.Product, error)
+	GetAll() ([]models.Product, error)
+	Create(ctx context.Context, in ProductInput) error
 }
 
 type ProductService struct {
-  repo ProductRepo
+	repo ProductRepo
 }
 
 func NewProductService(r ProductRepo) *ProductService {
-  return &ProductService{repo: r}
+	return &ProductService{repo: r}
 }
 
 func (s *ProductService) ListProducts() ([]models.Product, error) {
-  return s.repo.GetAll()
+	return s.repo.GetAll()
+}
+func (s *ProductService) CreateProduct(ctx context.Context, in ProductInput) error {
+	return s.repo.Create(ctx, in)
 }

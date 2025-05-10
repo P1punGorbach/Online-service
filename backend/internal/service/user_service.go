@@ -27,7 +27,8 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int) (*models.User, *models.UserProfile, error)
 	CreateProfile(ctx context.Context, userID int) error
 	UpdateProfile(ctx context.Context, userID int, in models.UpdateProfileInput ) error
-
+	ListAll(ctx context.Context) ([]models.User, error)
+	Delete(ctx context.Context, id int) error
 	// другие методы, которые тебе нужны
 }
 
@@ -39,6 +40,11 @@ func NewUserService(r *repository.UserRepo) *UserService {
 type RegisterInput struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+}
+type AdminCreateUserInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 // Register создаёт пользователя, хеширует пароль и сохраняет в БД
@@ -116,4 +122,41 @@ func (s *UserService) GetUserInfo(ctx context.Context, token string) (*models.Us
 }
 func (s *UserService) UpdateProfile(ctx context.Context, userID int, in models.UpdateProfileInput) error {
 	return s.repo.UpdateProfile(ctx, userID, in)
+}
+func (s *UserService) ListAll(ctx context.Context) ([]models.User, error) {
+	return s.repo.ListAll(ctx)
+}
+func (s *UserService) Delete(ctx context.Context, id int) error {
+	return s.repo.Delete(ctx, id)
+}
+func (s *UserService) AdminCreateUser(ctx context.Context, input AdminCreateUserInput) (*models.User, error) {
+	existing, err := s.repo.GetByEmail(ctx, input.Email)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, ErrUserAlreadyExists
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &models.User{
+		Email:        input.Email,
+		PasswordHash: string(hash),
+		IsAdmin:      input.IsAdmin,
+	}
+
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// создаём пустой профиль
+	if err := s.repo.CreateProfile(ctx, user.ID); err != nil {
+		return nil, fmt.Errorf("ошибка создания профиля: %w", err)
+	}
+
+	return user, nil
 }

@@ -16,17 +16,17 @@ type User struct {
 	IsActive     bool      `db:"is_active" json:"is_active"` // whether the user is active
 }
 type UserProfile struct {
-	UserID       uuid.UUID `db:"user_id"`       // внешний ключ на таблицу пользователей
-	Name         string    `db:"name"`          // имя пользователя
-	HeightCm     int       `db:"height_cm"`     // рост в сантиметрах		// например, 180
-	WeightKg     int       `db:"weight_kg"`     // вес в килограммах			// например, 75		// Дата рождения
-	PositionName string    `db:"position_name"` // id позиции в таблице позиций
+	UserID        uuid.UUID `db:"user_id"`        // внешний ключ на таблицу пользователей
+	Name          string    `db:"name"`           // имя пользователя
+	HeightCm      int       `db:"height_cm"`      // рост в сантиметрах		// например, 180
+	WeightKg      int       `db:"weight_kg"`      // вес в килограммах			// например, 75		// Дата рождения
+	PositionName  string    `db:"position_name"`  // id позиции в таблице позиций
+	PositionIndex int       `db:"position_index"` // индекс позиции в таблице позиций
 }
 type UpdateProfileInput struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Height   int    `json:"height"`
 	Weight   int    `json:"weight"`
-	Position int `json:"position"`
-
+	Position int    `json:"position_id"`
 }
