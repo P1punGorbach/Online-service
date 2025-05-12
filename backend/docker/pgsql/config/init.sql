@@ -4,14 +4,7 @@
 
 -- DROP TABLE public.brands;
 
-CREATE TABLE public.brands (
-	id serial4 NOT NULL,
-	"name" varchar(100) NOT NULL,
-	slug varchar(100) NOT NULL,
-	CONSTRAINT brands_name_key UNIQUE (name),
-	CONSTRAINT brands_pkey PRIMARY KEY (id),
-	CONSTRAINT brands_slug_key UNIQUE (slug)
-);
+
 
 
 -- public.positions определение
@@ -83,6 +76,70 @@ CREATE TABLE public.categories (
 	CONSTRAINT categories_slug_key UNIQUE (slug),
 	CONSTRAINT categories_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.categories(id)
 );
+INSERT INTO public.categories (name, slug) VALUES
+('Кроссовки', 'sneakers'),
+('Мячи', 'balls'),
+('Одежда', 'clothing'),
+('Аксессуары', 'accessories');
+
+-- Подкатегории для Одежды
+INSERT INTO public.categories (name, slug, parent_id) VALUES
+('Майки', 'tops', 3),
+('Футболки', 'tshirts', 3),
+('Шорты', 'shorts', 3),
+('Носки', 'socks', 3);
+
+-- Подкатегории для Аксессуаров
+INSERT INTO public.categories (name, slug, parent_id) VALUES
+('Чехол телефон', 'phonecase', 4),
+('Чехол очки', 'glasscase', 4),
+('Брелок', 'keychains', 4);
+
+CREATE TABLE public.brands (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  category_id INT NOT NULL REFERENCES public.categories(id),
+  CONSTRAINT brands_unique_pair UNIQUE (name, category_id)
+);
+-- Кроссовки (category_id = 1)
+INSERT INTO public.brands (name, category_id) VALUES
+  ('Nike', 1),
+  ('Adidas', 1),
+  ('Jordan', 1),
+  ('Under Armour', 1),
+  ('Puma', 1),
+  ('Anta', 1),
+  ('Li-Ning', 1),
+  ('Reebok', 1)
+ON CONFLICT (name, category_id) DO NOTHING;
+
+-- Мячи (category_id = 2)
+INSERT INTO public.brands (name, category_id) VALUES
+  ('Spalding', 2),
+  ('Wilson', 2),
+  ('Molten', 2),
+  ('Mikasa', 2),
+  ('Demix', 2)
+ON CONFLICT (name, category_id) DO NOTHING;
+
+-- Одежда (category_id = 3)
+INSERT INTO public.brands (name, category_id) VALUES
+  ('Nike', 3),
+  ('Adidas', 3),
+  ('Under Armour', 3),
+  ('Joma', 3),
+  ('Kappa', 3),
+  ('Puma', 3)
+ON CONFLICT (name, category_id) DO NOTHING;
+
+-- Аксессуары (category_id = 4)
+INSERT INTO public.brands (name, category_id) VALUES
+  ('McDavid', 4),
+  ('G-Form', 4),
+  ('Nike', 4),
+  ('Molten', 4),
+  ('Spalding', 4)
+ON CONFLICT (name, category_id) DO NOTHING;
 
 
 -- public.pick_history определение
@@ -111,6 +168,7 @@ CREATE TABLE public.products (
 	"name" varchar(255) NOT NULL,
 	description text NULL,
 	brand_id int4 NOT NULL,
+	price numeric(10, 2) NOT NULL,
 	category_id int4 NOT NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,

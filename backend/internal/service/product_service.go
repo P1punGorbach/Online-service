@@ -8,7 +8,7 @@ import (
 
 type ProductRepo interface {
 	GetAll() ([]models.Product, error)
-	Create(ctx context.Context, in ProductInput) error
+	Create(ctx context.Context, in models.ProductInput) error
 }
 
 type ProductService struct {
@@ -22,6 +22,6 @@ func NewProductService(r ProductRepo) *ProductService {
 func (s *ProductService) ListProducts() ([]models.Product, error) {
 	return s.repo.GetAll()
 }
-func (s *ProductService) CreateProduct(ctx context.Context, in ProductInput) error {
+func (s *ProductService) CreateProduct(ctx context.Context, in models.ProductInput) error {
 	return s.repo.Create(ctx, in)
 }

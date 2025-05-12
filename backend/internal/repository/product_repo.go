@@ -31,8 +31,8 @@ func (r *ProductRepo) GetAll() ([]models.Product, error) {
 	}
 	return out, nil
 }
-func (r *ProductRepo) Create(ctx context.Context, in ProductInput) error {
-	_, err := r.db.ExecContext(ctx, `
+func (r *ProductRepo) Create(ctx context.Context, in models.ProductInput) error {
+	_, err := r.DB.ExecContext(ctx, `
 		INSERT INTO products (
 			name, category_id, brand_id, description,
 			growth_min, growth_max, weight_min, weight_max,

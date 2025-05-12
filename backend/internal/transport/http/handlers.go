@@ -18,8 +18,9 @@ import (
 
 // Handler хранит все сервисы
 type Handler struct {
-	userSvc *service.UserService
-	prodSvc *service.ProductService
+	userSvc  *service.UserService
+	prodSvc  *service.ProductService
+	brandSvc *service.BrandService
 }
 
 // NewHandler создаёт репо→сервисы
@@ -30,10 +31,14 @@ func NewHandler(db *sql.DB) *Handler {
 	// products
 	prodRepo := repository.NewProductRepo(db)
 	prodSvc := service.NewProductService(prodRepo)
+	// brands
+	brandRepo := repository.NewBrandRepo(db)
+	brandSvc := service.NewBrandService(brandRepo)
 
 	return &Handler{
-		userSvc: userSvc,
-		prodSvc: prodSvc,
+		userSvc:  userSvc,
+		prodSvc:  prodSvc,
+		brandSvc: brandSvc,
 	}
 }
 
@@ -77,22 +82,6 @@ type registerInput struct {
 type loginInput struct {
 	Email    string `json:"email"    binding:"required,email"`
 	Password string `json:"password" binding:"required"`
-}
-type ProductInput struct {
-	Name         string   `json:"name"`
-	CategoryID   int      `json:"categoryId"`
-	BrandID      int      `json:"brandId"`
-	Description  string   `json:"description"`
-	GrowthMin    int      `json:"growthMin"`
-	GrowthMax    int      `json:"growthMax"`
-	WeightMin    int      `json:"weightMin"`
-	WeightMax    int      `json:"weightMax"`
-	PositionIDs  []int    `json:"positionIds"`
-	BallSize     string   `json:"ballSize"`
-	TopType      string   `json:"topType"`
-	BottomType   string   `json:"bottomType"`
-	AccessoryType string  `json:"accessoryType"`
-	StoreLinks   []string `json:"storeLinks"`
 }
 
 // Register — POST /api/register
@@ -303,7 +292,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	})
 }
 func (h *Handler) CreateProduct(c *gin.Context) {
-	var in ProductInput
+	var in models.ProductInput
 	if err := c.ShouldBindJSON(&in); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Некорректные данные"})
 		return
@@ -318,3 +307,12 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Товар успешно создан"})
 }
 
+// GET /api/brands
+func (h *Handler) ListBrands(c *gin.Context) {
+	brands, err := h.brandSvc.ListBrands()
+	if err != nil {
+		c.JSON(500, gin.H{"message": "Ошибка при получении брендов"})
+		return
+	}
+	c.JSON(200, brands)
+}
