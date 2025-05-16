@@ -9,6 +9,7 @@ import (
 type ProductRepo interface {
 	GetAll() ([]models.Product, error)
 	Create(ctx context.Context, in models.ProductInput) error
+	GetProductByID(ctx context.Context, id int) (*models.Product, error)
 }
 
 type ProductService struct {
@@ -25,3 +26,7 @@ func (s *ProductService) ListProducts() ([]models.Product, error) {
 func (s *ProductService) CreateProduct(ctx context.Context, in models.ProductInput) error {
 	return s.repo.Create(ctx, in)
 }
+func (s *ProductService) GetProductByID(ctx context.Context, id int) (*models.Product, error) {
+	return s.repo.GetProductByID(ctx, id)
+}
+

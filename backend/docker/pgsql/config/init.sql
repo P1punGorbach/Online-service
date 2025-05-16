@@ -87,8 +87,9 @@ INSERT INTO public.categories (name, slug, parent_id) VALUES
 ('Майки', 'tops', 3),
 ('Футболки', 'tshirts', 3),
 ('Шорты', 'shorts', 3),
-('Носки', 'socks', 3);
-
+('Носки', 'socks', 3),
+('Лонгслив', 'longsleeve', 3),
+('Компрессионное', 'compression', 3);
 -- Подкатегории для Аксессуаров
 INSERT INTO public.categories (name, slug, parent_id) VALUES
 ('Чехол телефон', 'phonecase', 4),
@@ -168,13 +169,23 @@ CREATE TABLE public.products (
 	"name" varchar(255) NOT NULL,
 	description text NULL,
 	brand_id int4 NOT NULL,
+	ball_size int4 null,
 	price numeric(10, 2) NOT NULL,
 	category_id int4 NOT NULL,
+	subcat_id int4 NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT products_pkey PRIMARY KEY (id),
 	CONSTRAINT products_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brands(id),
 	CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id)
+);
+
+CREATE TABLE public.product_store_links (
+  id serial PRIMARY KEY,
+  product_id INT NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  price NUMERIC(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
 );
 
 

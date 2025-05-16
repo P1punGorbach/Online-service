@@ -13,18 +13,22 @@ import (
 	"github.com/P1punGorbach/backend/internal/models"
 	"github.com/P1punGorbach/backend/internal/repository"
 	"github.com/P1punGorbach/backend/internal/service"
+	"github.com/P1punGorbach/backend/internal/lust"
 	"github.com/gin-gonic/gin"
 )
 
 // Handler хранит все сервисы
 type Handler struct {
-	userSvc  *service.UserService
-	prodSvc  *service.ProductService
-	brandSvc *service.BrandService
+	userSvc     *service.UserService
+	prodSvc     *service.ProductService
+	brandSvc    *service.BrandService
+	categorySvc *service.CategoryService
+	positionSvc *service.PositionService
+	lustClient  *lust.LustClient
 }
 
 // NewHandler создаёт репо→сервисы
-func NewHandler(db *sql.DB) *Handler {
+func NewHandler(db *sql.DB, lustClient *lust.LustClient) *Handler {
 	// user
 	userRepo := repository.NewUserRepo(db)
 	userSvc := service.NewUserService(userRepo)
@@ -35,10 +39,19 @@ func NewHandler(db *sql.DB) *Handler {
 	brandRepo := repository.NewBrandRepo(db)
 	brandSvc := service.NewBrandService(brandRepo)
 
+	catRepo := repository.NewCategoryRepo(db)
+	catSvc := service.NewCategoryService(catRepo)
+	posRepo := repository.NewPositionRepo(db)
+	posSvc := service.NewPositionService(posRepo)
+	
+
 	return &Handler{
-		userSvc:  userSvc,
-		prodSvc:  prodSvc,
-		brandSvc: brandSvc,
+		userSvc:     userSvc,
+		prodSvc:     prodSvc,
+		brandSvc:    brandSvc,
+		categorySvc: catSvc,
+		positionSvc: posSvc,
+		lustClient:  lustClient,
 	}
 }
 
@@ -67,6 +80,16 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	api.POST("/users", middlewareAuth, h.CreateUser)
 
 	api.POST("/products", middlewareAuth, h.CreateProduct)
+
+	api.GET("/brands", h.ListBrands)
+
+	api.GET("/categories", h.ListCategories)
+
+	api.GET("/positions", h.ListPositions)
+
+	api.GET("/products/:id", h.GetProductByID)
+
+	api.POST("/upload-image", h.UploadProductImage)
 
 	return r
 }
@@ -293,13 +316,16 @@ func (h *Handler) CreateUser(c *gin.Context) {
 }
 func (h *Handler) CreateProduct(c *gin.Context) {
 	var in models.ProductInput
+
 	if err := c.ShouldBindJSON(&in); err != nil {
+		fmt.Println("❌ Ошибка валидации:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Некорректные данные"})
 		return
 	}
 
 	err := h.prodSvc.CreateProduct(c.Request.Context(), in)
 	if err != nil {
+		fmt.Println("❌ Ошибка создания продукта:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Ошибка при создании товара"})
 		return
 	}
@@ -315,4 +341,64 @@ func (h *Handler) ListBrands(c *gin.Context) {
 		return
 	}
 	c.JSON(200, brands)
+}
+
+// ListCategories — GET /api/categories
+func (h *Handler) ListCategories(c *gin.Context) {
+	list, err := h.categorySvc.ListCategories(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+// ListPositions — GET /api/positions
+func (h *Handler) ListPositions(c *gin.Context) {
+	list, err := h.positionSvc.ListPositions(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+func (h *Handler) GetProductByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Неверный ID"})
+		return
+	}
+
+	product, err := h.prodSvc.GetProductByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(500, gin.H{"message": "Ошибка получения товара"})
+		return
+	}
+
+	c.JSON(200, product)
+}
+func (h *Handler) UploadProductImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		log.Println("❌ Ошибка получения файла:", err)
+		c.JSON(400, gin.H{"message": "Файл не получен"})
+		return
+	}
+
+	path := "/tmp/" + file.Filename
+	if err := c.SaveUploadedFile(file, path); err != nil {
+		log.Println("❌ Ошибка сохранения файла:", err)
+		c.JSON(500, gin.H{"message": "Ошибка сохранения файла"})
+		return
+	}
+
+	url, err := h.lustClient.UploadImage(path)
+	if err != nil {
+		log.Println("❌ Ошибка загрузки в Lust:", err)
+		c.JSON(500, gin.H{"message": "Ошибка загрузки в Lust"})
+		return
+	}
+	log.Println("✅ Файл загружен в Lust:", url)
+	c.JSON(200, gin.H{"url": url})
 }
